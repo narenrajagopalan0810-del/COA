@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlynnSim — Computer Architecture Lab &amp; Flynn's Taxonomy</title>
+    <meta name="description" content="Cycle-accurate interactive Flynn's Taxonomy emulator. Compare SISD, SIMD, MISD, and MIMD computer architectures side-by-side in real-time.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="css/style.css?v=20261016_v3">
+    <style>
+        *, *::before, *::after { box-sizing: border-box !important; margin: 0; padding: 0; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+        html, body { background: #000000 !important; color: #86efac !important; font-family: 'JetBrains Mono', 'Courier New', Courier, monospace !important; font-size: 13px !important; line-height: 1.6 !important; min-height: 100vh !important; overflow-x: hidden !important; }
+        a, a:visited { color: #00ff41 !important; text-decoration: none !important; }
+        a:hover { color: #39ff14 !important; }
+        .block-icon, .icon, i[class^="icon-"], [class*="emoji"] { display: none !important; }
+        #app-wrapper { display: block !important; min-height: 100vh !important; width: 100% !important; background: #000000 !important; }
+        #left-sidebar { position: fixed !important; top: 0 !important; left: 0 !important; bottom: 0 !important; width: 280px !important; height: 100vh !important; background: #030804 !important; border-right: 2px solid #00ff41 !important; display: flex !important; flex-direction: column !important; z-index: 9999 !important; overflow-y: auto !important; box-shadow: 4px 0 24px rgba(0,0,0,0.9) !important; }
+        .sidebar-header { padding: 24px 20px 20px !important; border-bottom: 1px solid #16381e !important; background: #050c06 !important; }
+        .sidebar-status-pill { display: inline-flex !important; align-items: center !important; gap: 8px !important; font-size: 11px !important; font-weight: 700 !important; color: #39ff14 !important; text-transform: uppercase !important; margin-bottom: 10px !important; }
+        .sidebar-status-pill::before { content: "" !important; display: inline-block !important; width: 6px !important; height: 6px !important; background: #39ff14 !important; border-radius: 50% !important; box-shadow: 0 0 10px #39ff14 !important; }
+        .sidebar-title { font-size: 22px !important; font-weight: 800 !important; color: #00ff41 !important; letter-spacing: 0.12em !important; line-height: 1.15 !important; text-shadow: 0 0 12px rgba(0, 255, 65, 0.45) !important; }
+        .sidebar-subtitle { font-size: 10px !important; font-weight: 600 !important; color: #366e43 !important; letter-spacing: 0.1em !important; text-transform: uppercase !important; margin-top: 5px !important; }
+        .sidebar-section-title { padding: 20px 20px 8px !important; font-size: 10px !important; font-weight: 800 !important; color: #366e43 !important; letter-spacing: 0.16em !important; text-transform: uppercase !important; }
+        .sidebar-nav-list { display: flex !important; flex-direction: column !important; padding: 0 10px !important; gap: 4px !important; }
+        .sidebar-link, .nav-tab { display: flex !important; flex-direction: column !important; padding: 10px 14px !important; color: #86efac !important; border-left: 3px solid transparent !important; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important; text-decoration: none !important; font-size: 12px !important; }
+        .sidebar-link-row { display: flex !important; justify-content: space-between !important; align-items: center !important; width: 100% !important; font-weight: 700 !important; }
+        .sidebar-link .link-sub { font-size: 9.5px !important; color: #366e43 !important; margin-top: 3px !important; letter-spacing: 0.05em !important; }
+        .sidebar-link:hover, .nav-tab:hover { color: #000000 !important; background: #00ff41 !important; border-left-color: #ffffff !important; transform: translateX(6px) !important; box-shadow: 0 0 16px rgba(0, 255, 65, 0.45) !important; }
+        .sidebar-link:hover *, .nav-tab:hover * { color: #000000 !important; }
+        .sidebar-link.active, .nav-tab.active { color: #000000 !important; background: #00ff41 !important; border-left-color: #ffffff !important; font-weight: 800 !important; box-shadow: 0 0 18px rgba(0, 255, 65, 0.45) !important; }
+        .sidebar-link.active *, .nav-tab.active * { color: #000000 !important; font-weight: 700 !important; }
+        .sidebar-footer { margin-top: auto !important; padding: 18px 20px !important; border-top: 1px solid #16381e !important; background: #050c06 !important; font-size: 10.5px !important; color: #366e43 !important; display: flex !important; flex-direction: column !important; gap: 5px !important; }
+        .sidebar-footer .telemetry-row { display: flex !important; justify-content: space-between !important; }
+        .sidebar-footer .telemetry-row strong { color: #00ff41 !important; }
+        #main-content, .main-viewport { margin-left: 280px !important; min-height: 100vh !important; background: #000000 !important; padding: 36px 44px 80px !important; }
+        .hero-container { border: 2px solid #00ff41 !important; background: #040905 !important; margin-bottom: 36px !important; box-shadow: 0 0 30px rgba(0, 255, 65, 0.15) !important; transition: all 0.25s ease !important; }
+        .hero-container:hover { box-shadow: 0 0 45px rgba(0, 255, 65, 0.25) !important; }
+        .hero-prompt-bar { display: flex !important; align-items: center !important; justify-content: space-between !important; padding: 12px 20px !important; background: #020502 !important; border-bottom: 1px solid #16381e !important; font-size: 11px !important; }
+        .hero-prompt-cmd { color: #39ff14 !important; font-weight: 700 !important; display: flex !important; align-items: center !important; gap: 8px !important; }
+        .hero-terminal-spec { color: #366e43 !important; font-size: 10.5px !important; }
+        .hero-content { padding: 36px 36px 30px !important; }
+        .hero-tag { display: inline-block !important; font-size: 11px !important; font-weight: 800 !important; color: #00ff41 !important; background: rgba(0, 255, 65, 0.08) !important; border: 1px solid #16381e !important; padding: 5px 12px !important; text-transform: uppercase !important; margin-bottom: 16px !important; }
+        .hero-title { font-size: 32px !important; font-weight: 800 !important; color: #00ff41 !important; text-shadow: 0 0 16px rgba(0, 255, 65, 0.4) !important; line-height: 1.2 !important; margin-bottom: 16px !important; }
+        .hero-description { font-size: 13.5px !important; line-height: 1.7 !important; color: #86efac !important; max-width: 960px !important; margin-bottom: 28px !important; }
+        .hero-quadrants-grid { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 16px !important; margin-bottom: 28px !important; }
+        .hero-quadrant-card { display: flex !important; flex-direction: column !important; padding: 20px 18px !important; background: #020502 !important; border: 1px solid #16381e !important; text-decoration: none !important; color: #86efac !important; transition: all 0.24s cubic-bezier(0.16, 1, 0.3, 1) !important; }
+        .hero-quadrant-card:hover { border-color: #00ff41 !important; background: #051207 !important; transform: translateY(-4px) !important; box-shadow: 0 0 20px rgba(0, 255, 65, 0.3) !important; }
+        .hero-quadrant-card .quadrant-tag { font-size: 10px !important; font-weight: 800 !important; color: #39ff14 !important; margin-bottom: 4px !important; }
+        .hero-quadrant-card .quadrant-axis { font-size: 9.5px !important; font-weight: 700 !important; color: #366e43 !important; text-transform: uppercase !important; margin-bottom: 10px !important; }
+        .hero-quadrant-card h3 { font-size: 15px !important; font-weight: 800 !important; color: #00ff41 !important; margin-bottom: 8px !important; }
+        .hero-quadrant-card p { font-size: 11.5px !important; line-height: 1.6 !important; color: #86efac !important; margin-bottom: 16px !important; flex: 1 !important; }
+        .hero-quadrant-card .quadrant-cta { font-size: 10.5px !important; font-weight: 800 !important; color: #00ff41 !important; text-transform: uppercase !important; border-top: 1px solid #16381e !important; padding-top: 10px !important; margin-top: auto !important; }
+        .hero-telemetry-strip { display: flex !important; flex-wrap: wrap !important; gap: 16px !important; padding: 14px 20px !important; background: #020502 !important; border: 1px solid #16381e !important; margin-bottom: 28px !important; }
+        .telemetry-chip { display: flex !important; align-items: center !important; gap: 8px !important; font-size: 11px !important; padding-right: 18px !important; border-right: 1px solid #0e2213 !important; }
+        .telemetry-chip:last-child { border-right: none !important; }
+        .telemetry-chip .t-k { color: #366e43 !important; text-transform: uppercase !important; font-size: 10px !important; font-weight: 700 !important; }
+        .telemetry-chip .t-v { color: #39ff14 !important; font-weight: 800 !important; }
+        .hero-buttons-row { display: flex !important; gap: 14px !important; flex-wrap: wrap !important; }
+        .control-btn, .btn, button { display: inline-flex !important; align-items: center !important; justify-content: center !important; font-family: 'JetBrains Mono', Courier, monospace !important; font-size: 11.5px !important; font-weight: 800 !important; letter-spacing: 0.09em !important; text-transform: uppercase !important; padding: 9px 18px !important; background: #020502 !important; color: #00ff41 !important; border: 1px solid #00ff41 !important; cursor: pointer !important; transition: all 0.16s ease !important; text-decoration: none !important; border-radius: 0 !important; outline: none !important; }
+        .control-btn:hover, .btn:hover, button:hover { background: #00ff41 !important; color: #000000 !important; box-shadow: 0 0 18px rgba(0, 255, 65, 0.5) !important; transform: translateY(-1px) !important; }
+        .btn-primary { border-color: #00ff41 !important; color: #00ff41 !important; }
+        .btn-success { border-color: #39ff14 !important; color: #39ff14 !important; }
+        .btn-accent { border-color: #00ff41 !important; color: #00ff41 !important; }
+        .btn-danger { border-color: #ff3838 !important; color: #ff3838 !important; }
+        .btn-danger:hover { background: #ff3838 !important; color: #000000 !important; }
+        #control-bar { display: flex !important; flex-wrap: wrap !important; align-items: center !important; gap: 14px !important; padding: 16px 20px !important; background: #050c06 !important; border: 1px solid #16381e !important; margin-bottom: 22px !important; }
+        .control-group { display: flex !important; align-items: center !important; gap: 8px !important; }
+        .control-label { font-size: 11px !important; font-weight: 700 !important; color: #366e43 !important; text-transform: uppercase !important; }
+        .control-select, .control-input-number, select, input { background: #020502 !important; color: #39ff14 !important; border: 1px solid #16381e !important; padding: 8px 12px !important; font-family: inherit !important; font-size: 12px !important; }
+        .playback-controls { display: flex !important; gap: 8px !important; }
+        .race-header { margin-bottom: 18px !important; }
+        .race-header h2 { font-size: 18px !important; font-weight: 800 !important; color: #00ff41 !important; margin-bottom: 6px !important; }
+        .race-header p { font-size: 12.5px !important; color: #86efac !important; }
+        #status-bar-container { display: flex !important; justify-content: space-between !important; align-items: center !important; padding: 16px 20px !important; background: #050c06 !important; border: 1px solid #16381e !important; margin-bottom: 16px !important; }
+        .workload-tag { font-size: 9.5px !important; font-weight: 800 !important; color: #366e43 !important; letter-spacing: 0.1em !important; text-transform: uppercase !important; }
+        .workload-heading { font-size: 16px !important; font-weight: 800 !important; color: #00ff41 !important; margin: 3px 0 !important; }
+        .workload-subtext { font-size: 11.5px !important; color: #86efac !important; }
+        .verification-box { border: 1px solid #16381e !important; background: #020502 !important; padding: 8px 14px !important; font-size: 11px !important; color: #39ff14 !important; font-weight: 700 !important; }
+        #cycle-trace-container { display: flex !important; align-items: center !important; gap: 14px !important; padding: 10px 18px !important; background: #020502 !important; border: 1px solid #16381e !important; margin-bottom: 22px !important; font-size: 11px !important; }
+        .trace-label { color: #00ff41 !important; font-weight: 800 !important; }
+        .trace-content { color: #86efac !important; }
+        .race-grid { display: grid !important; grid-template-columns: repeat(2, 1fr) !important; gap: 20px !important; margin-bottom: 24px !important; }
+        .arch-card { border: 1px solid #16381e !important; background: #050c06 !important; transition: border-color 0.2s ease, box-shadow 0.2s ease !important; }
+        .arch-card:hover { border-color: #00ff41 !important; box-shadow: 0 0 16px rgba(0, 255, 65, 0.2) !important; }
+        .card-header { padding: 12px 18px !important; background: #020502 !important; border-bottom: 1px solid #16381e !important; display: flex !important; justify-content: space-between !important; align-items: center !important; }
+        .card-title { display: flex !important; align-items: center !important; gap: 10px !important; }
+        .badge-acronym { background: #00ff41 !important; color: #000000 !important; font-weight: 800 !important; padding: 3px 8px !important; font-size: 11px !important; }
+        .card-title h3 { font-size: 13px !important; font-weight: 700 !important; color: #86efac !important; }
+        .card-metrics-bar { display: flex !important; justify-content: space-around !important; padding: 12px 16px !important; background: #030804 !important; border-bottom: 1px solid #16381e !important; }
+        .metric-item { display: flex !important; flex-direction: column !important; align-items: center !important; }
+        .m-lbl { font-size: 9.5px !important; font-weight: 700 !important; color: #366e43 !important; text-transform: uppercase !important; }
+        .metric-item strong { font-size: 14px !important; color: #00ff41 !important; font-weight: 800 !important; margin-top: 2px !important; }
+        .arch-status-badge { font-size: 10px !important; font-weight: 800 !important; padding: 3px 8px !important; border: 1px solid #16381e !important; color: #366e43 !important; }
+        #main-footer { margin-top: 60px !important; padding: 20px 0 !important; border-top: 1px solid #16381e !important; display: flex !important; justify-content: space-between !important; font-size: 11px !important; color: #366e43 !important; }
+    </style>
+</head>
+<body>
+<div id="app-wrapper">
+
+    <!-- Left Sidebar: Menu with the Processing Architectures -->
+    <aside id="left-sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-status-pill">SYS_ONLINE // 4.00 HZ</div>
+            <div class="sidebar-title">FLYNNSIM</div>
+            <div class="sidebar-subtitle">ADVANCED ARCHITECTURE LAB</div>
+        </div>
+
+        <div class="sidebar-section-title">// PROCESSING ENGINES</div>
+        <nav class="sidebar-nav-list" id="nav-tabs-bar">
+            <a href="sisd.html" class="sidebar-link nav-tab" data-view="sisd">
+                <div class="sidebar-link-row">
+                    <span class="link-code">[01]</span>
+                    <span class="link-name">SISD CORE</span>
+                </div>
+                <span class="link-sub">1 INST / 1 DATA STREAM</span>
+            </a>
+            <a href="simd.html" class="sidebar-link nav-tab" data-view="simd">
+                <div class="sidebar-link-row">
+                    <span class="link-code">[02]</span>
+                    <span class="link-name">SIMD VECTOR</span>
+                </div>
+                <span class="link-sub">1 INST / N DATA STREAMS</span>
+            </a>
+            <a href="misd.html" class="sidebar-link nav-tab" data-view="misd">
+                <div class="sidebar-link-row">
+                    <span class="link-code">[03]</span>
+                    <span class="link-name">MISD PIPELINE</span>
+                </div>
+                <span class="link-sub">N INST / 1 DATA STREAM</span>
+            </a>
+            <a href="mimd.html" class="sidebar-link nav-tab" data-view="mimd">
+                <div class="sidebar-link-row">
+                    <span class="link-code">[04]</span>
+                    <span class="link-name">MIMD MULTICORE</span>
+                </div>
+                <span class="link-sub">N INST / N DATA STREAMS</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-section-title">// ARENA &amp; EXPERIMENTS</div>
+        <nav class="sidebar-nav-list">
+            <a href="index.html" class="sidebar-link nav-tab active" data-view="all">
+                <div class="sidebar-link-row">
+                    <span class="link-code">[00]</span>
+                    <span class="link-name">RACE ARENA</span>
+                </div>
+                <span class="link-sub">SYNCHRONOUS EXECUTION</span>
+            </a>
+            <a href="analytics.html" class="sidebar-link nav-tab" data-view="analytics">
+                <div class="sidebar-link-row">
+                    <span class="link-code">[05]</span>
+                    <span class="link-name">ANALYTICS &amp; AMDAHL</span>
+                </div>
+                <span class="link-sub">SCALING LAWS &amp; BENCHMARKS</span>
+            </a>
+            <a href="theory.html" class="sidebar-link nav-tab" data-view="theory">
+                <div class="sidebar-link-row">
+                    <span class="link-code">[06]</span>
+                    <span class="link-name">TAXONOMY THEORY</span>
+                </div>
+                <span class="link-sub">1966 FLYNN COMPENDIUM</span>
+            </a>
+            <a href="editor.html" class="sidebar-link nav-tab" data-view="editor">
+                <div class="sidebar-link-row">
+                    <span class="link-code">[07]</span>
+                    <span class="link-name">ASSEMBLY IDE</span>
+                </div>
+                <span class="link-sub">TINYISA MICROCODE STUDIO</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="telemetry-row"><span>SYSTEM:</span> <strong>POSIX/VT100</strong></div>
+            <div class="telemetry-row"><span>EMULATION:</span> <strong>CYCLE-EXACT</strong></div>
+            <div class="telemetry-row"><span>TAXONOMY:</span> <strong>1966 FLYNN</strong></div>
+        </div>
+    </aside>
+
+    <!-- Main Viewport -->
+    <main id="main-content">
+
+        <!-- Prominent Hero Section -->
+        <section class="hero-container" id="hero">
+            <div class="hero-prompt-bar">
+                <div class="hero-prompt-cmd">flynnsim@mainframe:~$ ./init_taxonomy_suite --mode=synchronous</div>
+                <div class="hero-terminal-spec">EMULATOR v2.4 // 256-WORD UNIFIED RAM</div>
+            </div>
+
+            <div class="hero-content">
+                <span class="hero-tag">[COMPUTER ARCHITECTURE LAB // FLYNN'S TAXONOMY 1966]</span>
+                <h1 class="hero-title">FLYNNSIM: PARALLEL COMPUTING ARCHITECTURES</h1>
+                <p class="hero-description">
+                    A cycle-accurate hardware emulator comparing the four foundational paradigms of modern computer architecture. 
+                    In 1966, Michael J. Flynn classified all computer systems using two orthogonal axes: 
+                    the number of <strong>Instruction Streams</strong> and <strong>Data Streams</strong>. 
+                    Watch uniprocessors, vector processors, systolic pipelines, and multicore grids execute the exact same computational workload side-by-side in real time.
+                </p>
+
+                <!-- 4 Quadrants Interactive Grid -->
+                <div class="hero-quadrants-grid">
+                    <a href="sisd.html" class="hero-quadrant-card">
+                        <span class="quadrant-tag">[QUADRANT 01]</span>
+                        <div class="quadrant-axis">1 INST / 1 DATA STREAM</div>
+                        <h3>SISD // SINGLE CORE</h3>
+                        <p>Classic Von Neumann uniprocessor (e.g. Intel 8086). Strictly sequential instruction and data execution without hardware parallelism.</p>
+                        <div class="quadrant-cta">[ OPEN STUDIO ]</div>
+                    </a>
+
+                    <a href="simd.html" class="hero-quadrant-card">
+                        <span class="quadrant-tag">[QUADRANT 02]</span>
+                        <div class="quadrant-axis">1 INST / N DATA STREAMS</div>
+                        <h3>SIMD // VECTOR CORE</h3>
+                        <p>Lockstep vector execution with PE predication masks. Powers modern GPU compute warps, shader cores, and AVX-512 extensions.</p>
+                        <div class="quadrant-cta">[ OPEN STUDIO ]</div>
+                    </a>
+
+                    <a href="misd.html" class="hero-quadrant-card">
+                        <span class="quadrant-tag">[QUADRANT 03]</span>
+                        <div class="quadrant-axis">N INST / 1 DATA STREAM</div>
+                        <h3>MISD // STREAM PIPE</h3>
+                        <p>Cascaded systolic arrays and Triple Modular Redundancy (TMR) fault-tolerant voting systems in aerospace and avionics.</p>
+                        <div class="quadrant-cta">[ OPEN STUDIO ]</div>
+                    </a>
+
+                    <a href="mimd.html" class="hero-quadrant-card">
+                        <span class="quadrant-tag">[QUADRANT 04]</span>
+                        <div class="quadrant-axis">N INST / N DATA STREAMS</div>
+                        <h3>MIMD // MULTICORE</h3>
+                        <p>Independent program counters, shared-bus memory arbitration contention, and distributed cluster networks.</p>
+                        <div class="quadrant-cta">[ OPEN STUDIO ]</div>
+                    </a>
+                </div>
+
+                <!-- Hardware Telemetry Strip -->
+                <div class="hero-telemetry-strip">
+                    <div class="telemetry-chip"><span class="t-k">CORES:</span> <span class="t-v">2 - 16 PEs</span></div>
+                    <div class="telemetry-chip"><span class="t-k">MEMORY:</span> <span class="t-v">UNIFIED 256 WORDS</span></div>
+                    <div class="telemetry-chip"><span class="t-k">BUS:</span> <span class="t-v">ROUND-ROBIN ARBITER</span></div>
+                    <div class="telemetry-chip"><span class="t-k">CLOCK:</span> <span class="t-v">1 - 30 HZ</span></div>
+                    <div class="telemetry-chip"><span class="t-k">GROUND TRUTH:</span> <span class="t-v">BIT-EXACT VERIFIED</span></div>
+                </div>
+
+                <!-- Hero Action CTAs -->
+                <div class="hero-buttons-row">
+                    <a href="#arena" class="control-btn btn-primary"><span>ENTER RACE ARENA</span></a>
+                    <a href="analytics.html" class="control-btn btn-accent"><span>AMDAHL SPEEDUP LAB</span></a>
+                    <a href="theory.html" class="control-btn"><span>TAXONOMY THEORY</span></a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Race Arena Section -->
+        <section id="arena">
+            <div class="race-header">
+                <h2>SYNCHRONOUS EXECUTION RACE — ALL 4 ARCHITECTURES</h2>
+                <p>Observe how each processing paradigm executes the exact same workload cycle-by-cycle in real time.</p>
+            </div>
+
+            <!-- Simulation Control Bar -->
+            <section id="control-bar">
+                <div class="control-group">
+                    <label for="select-workload" class="control-label">Workload:</label>
+                    <select id="select-workload" class="control-select">
+                        <option value="vector_addition">Vector Addition (C = A + B)</option>
+                        <option value="matrix_mult">Matrix Multiplication (NxN)</option>
+                        <option value="conditional_filter">Conditional Filter (Branch Divergence)</option>
+                        <option value="stream_pipeline">Multi-Stage Stream Pipeline (MISD)</option>
+                        <option value="ft_voting">Fault-Tolerant Voting / TMR (MISD)</option>
+                    </select>
+                </div>
+
+                <div class="control-group" id="workload-param-row">
+                    <label id="workload-param-label" class="control-label">Array Size (L):</label>
+                    <input type="number" id="workload-param-input" class="control-input-number" value="8" min="2" max="24" step="1">
+                </div>
+
+                <div class="control-group">
+                    <label for="select-pe-count" class="control-label">PE Cores (N):</label>
+                    <select id="select-pe-count" class="control-select">
+                        <option value="2">2 PEs</option>
+                        <option value="4" selected>4 PEs</option>
+                        <option value="8">8 PEs</option>
+                        <option value="16">16 PEs</option>
+                    </select>
+                </div>
+
+                <div class="playback-controls">
+                    <button id="btn-step" class="control-btn btn-primary" title="Advance 1 Clock Cycle"><span>STEP CYCLE</span></button>
+                    <button id="btn-run" class="control-btn btn-success" title="Run / Pause Simulation"><span>RUN</span></button>
+                    <button id="btn-fast-forward" class="control-btn btn-accent" title="Execute Directly to Completion"><span>RUN TO HALT</span></button>
+                    <button id="btn-reset" class="control-btn btn-danger" title="Reset All Engines"><span>RESET</span></button>
+                </div>
+
+                <div class="control-group speed-group">
+                    <label for="speed-slider" class="control-label">Clock: <span id="speed-value">4 Hz</span></label>
+                    <input type="range" id="speed-slider" min="1" max="30" value="4" class="control-slider">
+                </div>
+
+                <div class="control-group" style="margin-left:auto;">
+                    <a href="analytics.html" class="control-btn btn-export"><span>VIEW ANALYTICS</span></a>
+                </div>
+            </section>
+
+            <!-- Live Status & Verification Banner -->
+            <section id="status-bar-container">
+                <div class="active-workload-info">
+                    <div class="workload-tag">ACTIVE BENCHMARK WORKLOAD</div>
+                    <div id="active-workload-title" class="workload-heading">Vector Addition (L = 8)</div>
+                    <div id="workload-description" class="workload-subtext">Adds two vectors A and B element-by-element across all available processing elements.</div>
+                </div>
+                <div id="verification-results-box" class="verification-box pending">
+                    <span>[STATUS: READY] Workload loaded. Step or Run simulation to verify architectural outputs.</span>
+                </div>
+            </section>
+
+            <!-- Live Cycle Trace Log -->
+            <section id="cycle-trace-container">
+                <div class="trace-label">LIVE CYCLE LOG</div>
+                <div id="live-trace-text" class="trace-content">Cycle 0: System initialized. Press STEP or RUN to begin execution.</div>
+            </section>
+
+            <!-- Race Grid (4 Architecture Panels) -->
+            <div class="race-grid">
+                <!-- SISD Panel -->
+                <div class="arch-card" id="panel-sisd">
+                    <div class="card-header header-sisd">
+                        <div class="card-title">
+                            <span class="badge-acronym">SISD</span>
+                            <h3>Single Instruction, Single Data</h3>
+                        </div>
+                        <a href="sisd.html" class="control-btn" style="padding:4px 10px;font-size:10px;">STUDIO</a>
+                        <span class="arch-status-badge status-idle">IDLE</span>
+                    </div>
+                    <div class="card-metrics-bar">
+                        <div class="metric-item"><span class="m-lbl">Cycles</span><strong class="metric-cycles">0</strong></div>
+                        <div class="metric-item"><span class="m-lbl">Instr</span><strong class="metric-instrs">0</strong></div>
+                        <div class="metric-item"><span class="m-lbl">Util</span><strong class="metric-util">0%</strong></div>
+                        <div class="metric-item"><span class="m-lbl">Speedup</span><strong class="metric-speedup">1.0×</strong></div>
+                    </div>
+                    <div class="diagram-container"></div>
+                    <div class="pe-grid-container"></div>
+                </div>
+
+                <!-- SIMD Panel -->
+                <div class="arch-card" id="panel-simd">
+                    <div class="card-header header-simd">
+                        <div class="card-title">
+                            <span class="badge-acronym">SIMD</span>
+                            <h3>Single Instruction, Multiple Data</h3>
+                        </div>
+                        <a href="simd.html" class="control-btn" style="padding:4px 10px;font-size:10px;">STUDIO</a>
+                        <span class="arch-status-badge status-idle">IDLE</span>
+                    </div>
+                    <div class="card-metrics-bar">
+                        <div class="metric-item"><span class="m-lbl">Cycles</span><strong class="metric-cycles">0</strong></div>
+                        <div class="metric-item"><span class="m-lbl">Instr</span><strong class="metric-instrs">0</strong></div>
+                        <div class="metric-item"><span class="m-lbl">Util</span><strong class="metric-util">0%</strong></div>
+                        <div class="metric-item"><span class="m-lbl">Speedup</span><strong class="metric-speedup">1.0×</strong></div>
+                    </div>
+                    <div class="diagram-container"></div>
+                    <div class="pe-grid-container"></div>
+                </div>
+
+                <!-- MISD Panel -->
+                <div class="arch-card" id="panel-misd">
+                    <div class="card-header header-misd">
+                        <div class="card-title">
+                            <span class="badge-acronym">MISD</span>
+                            <h3>Multiple Instruction, Single Data</h3>
+                        </div>
+                        <a href="misd.html" class="control-btn" style="padding:4px 10px;font-size:10px;">STUDIO</a>
+                        <span class="arch-status-badge status-idle">IDLE</span>
+                    </div>
+                    <div class="card-metrics-bar">
+                        <div class="metric-item"><span class="m-lbl">Cycles</span><strong class="metric-cycles">0</strong></div>
+                        <div class="metric-item"><span class="m-lbl">Instr</span><strong class="metric-instrs">0</strong></div>
+                        <div class="metric-item"><span class="m-lbl">Util</span><strong class="metric-util">0%</strong></div>
+                        <div class="metric-item"><span class="m-lbl">Speedup</span><strong class="metric-speedup">1.0×</strong></div>
+                    </div>
+                    <div class="diagram-container"></div>
+                    <div class="pe-grid-container"></div>
+                </div>
+
+                <!-- MIMD Panel -->
+                <div class="arch-card" id="panel-mimd">
+                    <div class="card-header header-mimd">
+                        <div class="card-title">
+                            <span class="badge-acronym">MIMD</span>
+                            <h3>Multiple Instruction, Multiple Data</h3>
+                        </div>
+                        <a href="mimd.html" class="control-btn" style="padding:4px 10px;font-size:10px;">STUDIO</a>
+                        <span class="arch-status-badge status-idle">IDLE</span>
+                    </div>
+                    <div class="card-metrics-bar">
+                        <div class="metric-item"><span class="m-lbl">Cycles</span><strong class="metric-cycles">0</strong></div>
+                        <div class="metric-item"><span class="m-lbl">Instr</span><strong class="metric-instrs">0</strong></div>
+                        <div class="metric-item"><span class="m-lbl">Util</span><strong class="metric-util">0%</strong></div>
+                        <div class="metric-item"><span class="m-lbl">Speedup</span><strong class="metric-speedup">1.0×</strong></div>
+                    </div>
+                    <div class="diagram-container"></div>
+                    <div class="pe-grid-container"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Main Footer -->
+        <footer id="main-footer">
+            <div><strong>FLYNNSIM // ADVANCED ARCHITECTURE LAB</strong> &mdash; Cycle-Accurate Multi-Paradigm Simulation</div>
+            <div>Flynn's Taxonomy &bull; Amdahl's Law &bull; 16-Bit Reduced ISA</div>
+        </footer>
+
+    </main>
+</div>
+
+<!-- Simulation Runtime Scripts -->
+<script src="js/isa.js"></script>
+<script src="js/pe.js"></script>
+<script src="js/memory.js"></script>
+<script src="js/architectures/base_arch.js"></script>
+<script src="js/architectures/sisd.js"></script>
+<script src="js/architectures/simd.js"></script>
+<script src="js/architectures/misd.js"></script>
+<script src="js/architectures/mimd.js"></script>
+<script src="js/workloads.js"></script>
+<script src="js/simulation.js"></script>
+<script src="js/visualizer.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

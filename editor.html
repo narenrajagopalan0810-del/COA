@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlynnSim — TinyISA Assembly Studio &amp; Debugger</title>
+    <meta name="description" content="Custom assembly IDE for TinyISA. Write, assemble, and single-step code across SISD uniprocessor, SIMD vector, and MIMD multicore hardware targets.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css?v=20261016_v3">
+    <style>
+        *, *::before, *::after { box-sizing: border-box !important; margin: 0; padding: 0; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+        html, body { background: #000000 !important; color: #86efac !important; font-family: 'JetBrains Mono', 'Courier New', Courier, monospace !important; font-size: 13px !important; line-height: 1.6 !important; min-height: 100vh !important; overflow-x: hidden !important; }
+        a, a:visited { color: #00ff41 !important; text-decoration: none !important; }
+        a:hover { color: #39ff14 !important; }
+        .block-icon, .icon, i[class^="icon-"], [class*="emoji"] { display: none !important; }
+        #app-wrapper { display: block !important; min-height: 100vh !important; width: 100% !important; background: #000000 !important; }
+        #left-sidebar { position: fixed !important; top: 0 !important; left: 0 !important; bottom: 0 !important; width: 280px !important; height: 100vh !important; background: #030804 !important; border-right: 2px solid #00ff41 !important; display: flex !important; flex-direction: column !important; z-index: 9999 !important; overflow-y: auto !important; box-shadow: 4px 0 24px rgba(0,0,0,0.9) !important; }
+        .sidebar-header { padding: 24px 20px 20px !important; border-bottom: 1px solid #16381e !important; background: #050c06 !important; }
+        .sidebar-status-pill { display: inline-flex !important; align-items: center !important; gap: 8px !important; font-size: 11px !important; font-weight: 700 !important; color: #39ff14 !important; text-transform: uppercase !important; margin-bottom: 10px !important; }
+        .sidebar-status-pill::before { content: "" !important; display: inline-block !important; width: 6px !important; height: 6px !important; background: #39ff14 !important; border-radius: 50% !important; box-shadow: 0 0 10px #39ff14 !important; }
+        .sidebar-title { font-size: 22px !important; font-weight: 800 !important; color: #00ff41 !important; letter-spacing: 0.12em !important; line-height: 1.15 !important; text-shadow: 0 0 12px rgba(0, 255, 65, 0.45) !important; }
+        .sidebar-subtitle { font-size: 10px !important; font-weight: 600 !important; color: #366e43 !important; letter-spacing: 0.1em !important; text-transform: uppercase !important; margin-top: 5px !important; }
+        .sidebar-section-title { padding: 20px 20px 8px !important; font-size: 10px !important; font-weight: 800 !important; color: #366e43 !important; letter-spacing: 0.16em !important; text-transform: uppercase !important; }
+        .sidebar-nav-list { display: flex !important; flex-direction: column !important; padding: 0 10px !important; gap: 4px !important; }
+        .sidebar-link, .nav-tab { display: flex !important; flex-direction: column !important; padding: 10px 14px !important; color: #86efac !important; border-left: 3px solid transparent !important; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important; text-decoration: none !important; font-size: 12px !important; }
+        .sidebar-link-row { display: flex !important; justify-content: space-between !important; align-items: center !important; width: 100% !important; font-weight: 700 !important; }
+        .sidebar-link .link-sub { font-size: 9.5px !important; color: #366e43 !important; margin-top: 3px !important; letter-spacing: 0.05em !important; }
+        .sidebar-link:hover, .nav-tab:hover { color: #000000 !important; background: #00ff41 !important; border-left-color: #ffffff !important; transform: translateX(6px) !important; box-shadow: 0 0 16px rgba(0, 255, 65, 0.45) !important; }
+        .sidebar-link:hover *, .nav-tab:hover * { color: #000000 !important; }
+        .sidebar-link.active, .nav-tab.active { color: #000000 !important; background: #00ff41 !important; border-left-color: #ffffff !important; font-weight: 800 !important; box-shadow: 0 0 18px rgba(0, 255, 65, 0.45) !important; }
+        .sidebar-link.active *, .nav-tab.active * { color: #000000 !important; font-weight: 700 !important; }
+        .sidebar-footer { margin-top: auto !important; padding: 18px 20px !important; border-top: 1px solid #16381e !important; background: #050c06 !important; font-size: 10.5px !important; color: #366e43 !important; display: flex !important; flex-direction: column !important; gap: 5px !important; }
+        .sidebar-footer .telemetry-row { display: flex !important; justify-content: space-between !important; }
+        .sidebar-footer .telemetry-row strong { color: #00ff41 !important; }
+        #main-content, .main-viewport { margin-left: 280px !important; min-height: 100vh !important; background: #000000 !important; padding: 36px 44px 80px !important; }
+        .studio-container { max-width: 1400px !important; margin: 0 auto !important; }
+        .control-btn, .btn, button { display: inline-flex !important; align-items: center !important; justify-content: center !important; font-family: 'JetBrains Mono', Courier, monospace !important; font-size: 11.5px !important; font-weight: 800 !important; letter-spacing: 0.09em !important; text-transform: uppercase !important; padding: 9px 18px !important; background: #020502 !important; color: #00ff41 !important; border: 1px solid #00ff41 !important; cursor: pointer !important; transition: all 0.16s ease !important; text-decoration: none !important; border-radius: 0 !important; outline: none !important; }
+        .control-btn:hover, .btn:hover, button:hover { background: #00ff41 !important; color: #000000 !important; box-shadow: 0 0 18px rgba(0, 255, 65, 0.5) !important; transform: translateY(-1px) !important; }
+        .btn-primary { border-color: #00ff41 !important; color: #00ff41 !important; }
+        .btn-success { border-color: #39ff14 !important; color: #39ff14 !important; }
+        .btn-accent { border-color: #00ff41 !important; color: #00ff41 !important; }
+        .btn-danger { border-color: #ff3838 !important; color: #ff3838 !important; }
+        .btn-danger:hover { background: #ff3838 !important; color: #000000 !important; }
+        .studio-hero { border: 1px solid #00ff41 !important; background: #050c06 !important; padding: 26px 30px !important; margin-bottom: 24px !important; display: flex !important; justify-content: space-between !important; align-items: flex-start !important; gap: 24px !important; }
+        .studio-hero-text h2 { font-size: 22px !important; color: #00ff41 !important; font-weight: 800 !important; margin-bottom: 8px !important; }
+        .studio-hero-text p { font-size: 13.5px !important; color: #86efac !important; line-height: 1.65 !important; }
+        .studio-hero-badge { border: 1px solid #00ff41 !important; color: #00ff41 !important; background: rgba(0, 255, 65, 0.08) !important; padding: 5px 12px !important; font-weight: 800 !important; height: fit-content !important; text-transform: uppercase !important; font-size: 10.5px !important; white-space: nowrap !important; }
+        .info-callout { border: 1px solid #16381e !important; background: #020502 !important; padding: 20px 26px !important; margin-bottom: 24px !important; color: #86efac !important; font-size: 13px !important; line-height: 1.7 !important; }
+        .callout-title { font-size: 12px !important; font-weight: 800 !important; color: #39ff14 !important; margin-bottom: 8px !important; text-transform: uppercase !important; }
+        #control-bar { display: flex !important; flex-wrap: wrap !important; align-items: center !important; gap: 14px !important; padding: 16px 20px !important; background: #050c06 !important; border: 1px solid #16381e !important; margin-bottom: 22px !important; }
+        .control-group { display: flex !important; align-items: center !important; gap: 8px !important; }
+        .control-label { font-size: 11px !important; font-weight: 700 !important; color: #366e43 !important; text-transform: uppercase !important; }
+        .control-select, .control-input-number, select, input, textarea { background: #020502 !important; color: #39ff14 !important; border: 1px solid #16381e !important; padding: 8px 12px !important; font-family: inherit !important; font-size: 12px !important; }
+        .inspector-panel { border: 1px solid #16381e !important; background: #050c06 !important; margin-bottom: 24px !important; }
+        .inspector-header { padding: 12px 18px !important; background: #020502 !important; border-bottom: 1px solid #16381e !important; font-size: 11px !important; font-weight: 800 !important; color: #00ff41 !important; letter-spacing: 0.1em !important; text-transform: uppercase !important; }
+        .studio-inspectors-grid { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 22px !important; margin-bottom: 24px !important; }
+        #main-footer { margin-top: 60px !important; padding: 20px 0 !important; border-top: 1px solid #16381e !important; display: flex !important; justify-content: space-between !important; font-size: 11px !important; color: #366e43 !important; }
+    </style>
+</head>
+<body>
+<div id="app-wrapper">
+
+    <!-- Left Sidebar: Menu with the Processing Architectures -->
+    <aside id="left-sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-status-pill">SYS_ONLINE // 4.00 HZ</div>
+            <div class="sidebar-title">FLYNNSIM</div>
+            <div class="sidebar-subtitle">ADVANCED ARCHITECTURE LAB</div>
+        </div>
+
+        <div class="sidebar-section-title">// PROCESSING ENGINES</div>
+        <nav class="sidebar-nav-list" id="nav-tabs-bar">
+            <a href="sisd.html" class="sidebar-link">
+                <div class="sidebar-link-row">
+                    <span class="link-code">[01]</span>
+                    <span class="link-name">SISD CORE</span>
+                </div>
+                <span class="link-sub">1 INST / 1 DATA STREAM</span>
+            </a>
+            <a href="simd.html" class="sidebar-link">
+                <div class="sidebar-link-row">
+                    <span class="link-code">[02]</span>
+                    <span class="link-name">SIMD VECTOR</span>
+                </div>
+                <span class="link-sub">1 INST / N DATA STREAMS</span>
+            </a>
+            <a href="misd.html" class="sidebar-link">
+                <div class="sidebar-link-row">
+                    <span class="link-code">[03]</span>
+                    <span class="link-name">MISD PIPELINE</span>
+                </div>
+                <span class="link-sub">N INST / 1 DATA STREAM</span>
+            </a>
+            <a href="mimd.html" class="sidebar-link">
+                <div class="sidebar-link-row">
+                    <span class="link-code">[04]</span>
+                    <span class="link-name">MIMD MULTICORE</span>
+                </div>
+                <span class="link-sub">N INST / N DATA STREAMS</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-section-title">// ARENA &amp; EXPERIMENTS</div>
+        <nav class="sidebar-nav-list">
+            <a href="index.html" class="sidebar-link">
+                <div class="sidebar-link-row">
+                    <span class="link-code">[00]</span>
+                    <span class="link-name">RACE ARENA</span>
+                </div>
+                <span class="link-sub">SYNCHRONOUS EXECUTION</span>
+            </a>
+            <a href="analytics.html" class="sidebar-link">
+                <div class="sidebar-link-row">
+                    <span class="link-code">[05]</span>
+                    <span class="link-name">ANALYTICS &amp; AMDAHL</span>
+                </div>
+                <span class="link-sub">SCALING LAWS &amp; BENCHMARKS</span>
+            </a>
+            <a href="theory.html" class="sidebar-link">
+                <div class="sidebar-link-row">
+                    <span class="link-code">[06]</span>
+                    <span class="link-name">TAXONOMY THEORY</span>
+                </div>
+                <span class="link-sub">1966 FLYNN COMPENDIUM</span>
+            </a>
+            <a href="editor.html" class="sidebar-link active">
+                <div class="sidebar-link-row">
+                    <span class="link-code">[07]</span>
+                    <span class="link-name">ASSEMBLY IDE</span>
+                </div>
+                <span class="link-sub">TINYISA MICROCODE STUDIO</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="telemetry-row"><span>TOOL:</span> <strong>TINYISA_ASSEMBLER</strong></div>
+            <div class="telemetry-row"><span>ISA:</span> <strong>16-BIT LOAD/STORE</strong></div>
+            <div class="telemetry-row"><span>TARGETS:</span> <strong>SISD / SIMD / MIMD</strong></div>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main id="main-content">
+        <div class="studio-container">
+
+            <!-- Studio Hero Banner -->
+            <div class="studio-hero">
+                <div class="studio-hero-text">
+                    <h2>[07] TINYISA ASSEMBLY IDE &amp; DEBUGGER</h2>
+                    <p>
+                        Write custom assembly programs, assemble them into cycle-accurate microcode, and step through execution cycle-by-cycle 
+                        on SISD uniprocessor, SIMD vector broadcast arrays, or MIMD independent multicore targets. Inspect live registers and memory writebacks in real time.
+                    </p>
+                </div>
+                <span class="studio-hero-badge">MICROCODE WORKBENCH</span>
+            </div>
+
+            <!-- Simulation Control Bar -->
+            <section id="control-bar">
+                <div class="control-group">
+                    <label for="custom-target-arch" class="control-label">Target Architecture:</label>
+                    <select id="custom-target-arch" class="control-select">
+                        <option value="SISD" selected>SISD (Single Uniprocessor)</option>
+                        <option value="SIMD">SIMD (4 Vector PEs with Lockstep Broadcast)</option>
+                        <option value="MIMD">MIMD (4 Independent Cores)</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <button id="btn-assemble-custom" class="control-btn btn-primary"><span>ASSEMBLE &amp; LOAD</span></button>
+                </div>
+
+                <div class="playback-controls">
+                    <button id="btn-step" class="control-btn btn-success"><span>STEP CYCLE</span></button>
+                    <button id="btn-run" class="control-btn btn-accent"><span>RUN</span></button>
+                    <button id="btn-reset" class="control-btn btn-danger"><span>RESET</span></button>
+                </div>
+            </section>
+
+            <!-- Status Box -->
+            <div id="custom-editor-status" style="padding:12px 18px;background:var(--c-bg);border:1px solid var(--c-border);font-size:11.5px;color:var(--c-text-body);margin-bottom:18px;">
+                Ready to assemble.
+            </div>
+
+            <!-- Live Cycle Narrative Banner -->
+            <section id="cycle-trace-container">
+                <div class="trace-label">CYCLE TRACE</div>
+                <div id="editor-trace-text" class="trace-content">Cycle 0: Program loaded. Ready to step.</div>
+            </section>
+
+            <!-- 2-Column IDE Layout -->
+            <div class="studio-inspectors-grid">
+                <!-- Left Column: Source Code Editor -->
+                <div style="display:flex;flex-direction:column;gap:20px;">
+                    <div class="inspector-panel">
+                        <div class="inspector-header">SOURCE CODE EDITOR (TINYISA)</div>
+                        <div style="padding:14px;background:var(--c-bg);">
+                            <textarea id="custom-assembly-code" style="width:100%;height:220px;background:#000000;color:var(--c-phosphor-bright);border:1px solid var(--c-border-dim);padding:12px;font-family:var(--font-mono);font-size:12px;line-height:1.55;outline:none;resize:vertical;">
+; TinyISA Sample: Conditional scaling and memory write
+LOAD R0, #15      ; Load immediate 15 into R0
+LOAD R1, #5       ; Load immediate 5 into R1
+ADD R2, R0, R1    ; R2 = 15 + 5 = 20
+MUL R3, R2, #2    ; R3 = 20 * 2 = 40
+CMP R3, #30       ; Compare R3 with 30
+BGT CLAMP         ; If R3 > 30, branch to CLAMP
+ADD R3, R3, #10   ; Fallback
+JMP SAVE
+CLAMP: LOAD R3, #30 ; Clamp value to 30
+SAVE:  STORE [10], R3 ; Store result into Memory[10]
+HALT              ; Stop execution</textarea>
+                        </div>
+                    </div>
+
+                    <!-- Core Register File -->
+                    <div class="inspector-panel">
+                        <div class="inspector-header">LIVE CORE REGISTERS</div>
+                        <div style="padding:14px;background:var(--c-bg);display:grid;grid-template-columns:repeat(6, 1fr);gap:8px;text-align:center;">
+                            <div style="background:var(--c-surface);padding:8px;border:1px solid var(--c-border-dim);">
+                                <span style="font-size:9.5px;color:var(--c-text-muted);display:block;">R0</span>
+                                <div id="reg-r0" style="font-size:15px;font-weight:800;color:var(--c-phosphor);">0</div>
+                            </div>
+                            <div style="background:var(--c-surface);padding:8px;border:1px solid var(--c-border-dim);">
+                                <span style="font-size:9.5px;color:var(--c-text-muted);display:block;">R1</span>
+                                <div id="reg-r1" style="font-size:15px;font-weight:800;color:var(--c-phosphor);">0</div>
+                            </div>
+                            <div style="background:var(--c-surface);padding:8px;border:1px solid var(--c-border-dim);">
+                                <span style="font-size:9.5px;color:var(--c-text-muted);display:block;">R2</span>
+                                <div id="reg-r2" style="font-size:15px;font-weight:800;color:var(--c-phosphor);">0</div>
+                            </div>
+                            <div style="background:var(--c-surface);padding:8px;border:1px solid var(--c-border-dim);">
+                                <span style="font-size:9.5px;color:var(--c-text-muted);display:block;">R3</span>
+                                <div id="reg-r3" style="font-size:15px;font-weight:800;color:var(--c-phosphor);">0</div>
+                            </div>
+                            <div style="background:var(--c-surface);padding:8px;border:1px solid var(--c-border-dim);">
+                                <span style="font-size:9.5px;color:var(--c-text-muted);display:block;">PC</span>
+                                <div id="reg-pc" style="font-size:15px;font-weight:800;color:var(--c-amber);">0</div>
+                            </div>
+                            <div style="background:var(--c-surface);padding:8px;border:1px solid var(--c-border-dim);">
+                                <span style="font-size:9.5px;color:var(--c-text-muted);display:block;">ZF</span>
+                                <div id="reg-zf" style="font-size:15px;font-weight:800;color:var(--c-phosphor-bright);">0</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Output Memory Inspector -->
+                    <div class="inspector-panel">
+                        <div class="inspector-header">OUTPUT MEMORY INSPECTOR (ADDR 0..47)</div>
+                        <div id="editor-memory-grid" class="memory-grid" style="max-height:160px;"></div>
+                    </div>
+                </div>
+
+                <!-- Right Column: TinyISA Reference -->
+                <div class="inspector-panel">
+                    <div class="inspector-header">TINYISA INSTRUCTION SET REFERENCE</div>
+                    <div style="overflow-x:auto;padding:12px;background:var(--c-bg);">
+                        <table class="comparison-table">
+                            <thead>
+                                <tr>
+                                    <th>Opcode</th>
+                                    <th>Cycles</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td><code>LOAD Rd, [addr]</code></td><td>2</td><td>Load data from memory into register Rd</td></tr>
+                                <tr><td><code>LOAD Rd, #imm</code></td><td>1</td><td>Load immediate constant into register Rd</td></tr>
+                                <tr><td><code>STORE [addr], Rs</code></td><td>2</td><td>Store register value into memory address</td></tr>
+                                <tr><td><code>ADD Rd, Rs, Rt</code></td><td>1</td><td>Rd = Rs + Rt</td></tr>
+                                <tr><td><code>SUB Rd, Rs, Rt</code></td><td>1</td><td>Rd = Rs - Rt (sets ZF, LT, GT flags)</td></tr>
+                                <tr><td><code>MUL Rd, Rs, Rt</code></td><td>3</td><td>Multi-cycle integer multiplication</td></tr>
+                                <tr><td><code>CMP Rs, Rt</code></td><td>1</td><td>Compare Rs and Rt (sets ZF, LT, GT flags)</td></tr>
+                                <tr><td><code>JMP label</code></td><td>1</td><td>Unconditional jump to label</td></tr>
+                                <tr><td><code>BEQ label</code></td><td>1</td><td>Branch if Zero Flag (ZF == 1)</td></tr>
+                                <tr><td><code>BGT label</code></td><td>1</td><td>Branch if Greater Than (GT == 1)</td></tr>
+                                <tr><td><code>BLT label</code></td><td>1</td><td>Branch if Less Than (LT == 1)</td></tr>
+                                <tr><td><code>HALT</code></td><td>1</td><td>Halt processor execution</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Footer -->
+            <footer id="main-footer">
+                <div><strong>FLYNNSIM // CUSTOM ASSEMBLY IDE</strong> &mdash; Microarchitectural Assembler</div>
+                <div>TinyISA 16-Bit Reduced &bull; Multi-Target Architecture Execution</div>
+            </footer>
+        </div>
+    </main>
+</div>
+
+<!-- Scripts -->
+<script src="js/isa.js"></script>
+<script src="js/pe.js"></script>
+<script src="js/memory.js"></script>
+<script src="js/architectures/base_arch.js"></script>
+<script src="js/architectures/sisd.js"></script>
+<script src="js/architectures/simd.js"></script>
+<script src="js/architectures/mimd.js"></script>
+<script src="js/page_editor.js"></script>
+</body>
+</html>

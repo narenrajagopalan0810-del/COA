@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlynnSim — Flynn's Taxonomy Theory Reference</title>
+    <meta name="description" content="Comprehensive Computer Systems Architecture reference on Flynn's Taxonomy (1966). SISD, SIMD, MISD, and MIMD mechanisms, technical defense Q&amp;A, and scaling laws.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css?v=20261016_v3">
+    <style>
+        *, *::before, *::after { box-sizing: border-box !important; margin: 0; padding: 0; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+        html, body { background: #000000 !important; color: #86efac !important; font-family: 'JetBrains Mono', 'Courier New', Courier, monospace !important; font-size: 13px !important; line-height: 1.6 !important; min-height: 100vh !important; overflow-x: hidden !important; }
+        a, a:visited { color: #00ff41 !important; text-decoration: none !important; }
+        a:hover { color: #39ff14 !important; }
+        .block-icon, .icon, i[class^="icon-"], [class*="emoji"] { display: none !important; }
+        #app-wrapper { display: block !important; min-height: 100vh !important; width: 100% !important; background: #000000 !important; }
+        #left-sidebar { position: fixed !important; top: 0 !important; left: 0 !important; bottom: 0 !important; width: 280px !important; height: 100vh !important; background: #030804 !important; border-right: 2px solid #00ff41 !important; display: flex !important; flex-direction: column !important; z-index: 9999 !important; overflow-y: auto !important; box-shadow: 4px 0 24px rgba(0,0,0,0.9) !important; }
+        .sidebar-header { padding: 24px 20px 20px !important; border-bottom: 1px solid #16381e !important; background: #050c06 !important; }
+        .sidebar-status-pill { display: inline-flex !important; align-items: center !important; gap: 8px !important; font-size: 11px !important; font-weight: 700 !important; color: #39ff14 !important; text-transform: uppercase !important; margin-bottom: 10px !important; }
+        .sidebar-status-pill::before { content: "" !important; display: inline-block !important; width: 6px !important; height: 6px !important; background: #39ff14 !important; border-radius: 50% !important; box-shadow: 0 0 10px #39ff14 !important; }
+        .sidebar-title { font-size: 22px !important; font-weight: 800 !important; color: #00ff41 !important; letter-spacing: 0.12em !important; line-height: 1.15 !important; text-shadow: 0 0 12px rgba(0, 255, 65, 0.45) !important; }
+        .sidebar-subtitle { font-size: 10px !important; font-weight: 600 !important; color: #366e43 !important; letter-spacing: 0.1em !important; text-transform: uppercase !important; margin-top: 5px !important; }
+        .sidebar-section-title { padding: 20px 20px 8px !important; font-size: 10px !important; font-weight: 800 !important; color: #366e43 !important; letter-spacing: 0.16em !important; text-transform: uppercase !important; }
+        .sidebar-nav-list { display: flex !important; flex-direction: column !important; padding: 0 10px !important; gap: 4px !important; }
+        .sidebar-link, .nav-tab { display: flex !important; flex-direction: column !important; padding: 10px 14px !important; color: #86efac !important; border-left: 3px solid transparent !important; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important; text-decoration: none !important; font-size: 12px !important; }
+        .sidebar-link-row { display: flex !important; justify-content: space-between !important; align-items: center !important; width: 100% !important; font-weight: 700 !important; }
+        .sidebar-link .link-sub { font-size: 9.5px !important; color: #366e43 !important; margin-top: 3px !important; letter-spacing: 0.05em !important; }
+        .sidebar-link:hover, .nav-tab:hover { color: #000000 !important; background: #00ff41 !important; border-left-color: #ffffff !important; transform: translateX(6px) !important; box-shadow: 0 0 16px rgba(0, 255, 65, 0.45) !important; }
+        .sidebar-link:hover *, .nav-tab:hover * { color: #000000 !important; }
+        .sidebar-link.active, .nav-tab.active { color: #000000 !important; background: #00ff41 !important; border-left-color: #ffffff !important; font-weight: 800 !important; box-shadow: 0 0 18px rgba(0, 255, 65, 0.45) !important; }
+        .sidebar-link.active *, .nav-tab.active * { color: #000000 !important; font-weight: 700 !important; }
+        .sidebar-footer { margin-top: auto !important; padding: 18px 20px !important; border-top: 1px solid #16381e !important; background: #050c06 !important; font-size: 10.5px !important; color: #366e43 !important; display: flex !important; flex-direction: column !important; gap: 5px !important; }
+        .sidebar-footer .telemetry-row { display: flex !important; justify-content: space-between !important; }
+        .sidebar-footer .telemetry-row strong { color: #00ff41 !important; }
+        #main-content, .main-viewport { margin-left: 280px !important; min-height: 100vh !important; background: #000000 !important; padding: 36px 44px 80px !important; }
+        .studio-container { max-width: 1400px !important; margin: 0 auto !important; }
+        .hero-container { border: 2px solid #00ff41 !important; background: #040905 !important; margin-bottom: 36px !important; box-shadow: 0 0 30px rgba(0, 255, 65, 0.15) !important; transition: all 0.25s ease !important; }
+        .hero-container:hover { box-shadow: 0 0 45px rgba(0, 255, 65, 0.25) !important; }
+        .hero-quadrants-grid { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 16px !important; margin-bottom: 28px !important; }
+        .hero-quadrant-card { display: flex !important; flex-direction: column !important; padding: 20px 18px !important; background: #020502 !important; border: 1px solid #16381e !important; text-decoration: none !important; color: #86efac !important; transition: all 0.24s cubic-bezier(0.16, 1, 0.3, 1) !important; }
+        .hero-quadrant-card:hover { border-color: #00ff41 !important; background: #051207 !important; transform: translateY(-4px) !important; box-shadow: 0 0 20px rgba(0, 255, 65, 0.3) !important; }
+        .hero-quadrant-card .quadrant-tag { font-size: 10px !important; font-weight: 800 !important; color: #39ff14 !important; margin-bottom: 4px !important; }
+        .hero-quadrant-card .quadrant-axis { font-size: 9.5px !important; font-weight: 700 !important; color: #366e43 !important; text-transform: uppercase !important; margin-bottom: 10px !important; }
+        .hero-quadrant-card h3 { font-size: 15px !important; font-weight: 800 !important; color: #00ff41 !important; margin-bottom: 8px !important; }
+        .hero-quadrant-card p { font-size: 11.5px !important; line-height: 1.6 !important; color: #86efac !important; margin-bottom: 16px !important; flex: 1 !important; }
+        .control-btn, .btn, button { display: inline-flex !important; align-items: center !important; justify-content: center !important; font-family: 'JetBrains Mono', Courier, monospace !important; font-size: 11.5px !important; font-weight: 800 !important; letter-spacing: 0.09em !important; text-transform: uppercase !important; padding: 9px 18px !important; background: #020502 !important; color: #00ff41 !important; border: 1px solid #00ff41 !important; cursor: pointer !important; transition: all 0.16s ease !important; text-decoration: none !important; border-radius: 0 !important; outline: none !important; }
+        .control-btn:hover, .btn:hover, button:hover { background: #00ff41 !important; color: #000000 !important; box-shadow: 0 0 18px rgba(0, 255, 65, 0.5) !important; transform: translateY(-1px) !important; }
+        .studio-hero { border: 1px solid #00ff41 !important; background: #050c06 !important; padding: 26px 30px !important; margin-bottom: 24px !important; display: flex !important; justify-content: space-between !important; align-items: flex-start !important; gap: 24px !important; }
+        .studio-hero-text h2 { font-size: 22px !important; color: #00ff41 !important; font-weight: 800 !important; margin-bottom: 8px !important; }
+        .studio-hero-text p { font-size: 13.5px !important; color: #86efac !important; line-height: 1.65 !important; }
+        .studio-hero-badge { border: 1px solid #00ff41 !important; color: #00ff41 !important; background: rgba(0, 255, 65, 0.08) !important; padding: 5px 12px !important; font-weight: 800 !important; height: fit-content !important; text-transform: uppercase !important; font-size: 10.5px !important; white-space: nowrap !important; }
+        .inspector-panel { border: 1px solid #16381e !important; background: #050c06 !important; margin-bottom: 24px !important; }
+        .inspector-header { padding: 12px 18px !important; background: #020502 !important; border-bottom: 1px solid #16381e !important; font-size: 11px !important; font-weight: 800 !important; color: #00ff41 !important; letter-spacing: 0.1em !important; text-transform: uppercase !important; }
+        .studio-inspectors-grid { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 22px !important; margin-bottom: 24px !important; }
+        #main-footer { margin-top: 60px !important; padding: 20px 0 !important; border-top: 1px solid #16381e !important; display: flex !important; justify-content: space-between !important; font-size: 11px !important; color: #366e43 !important; }
+    </style>
+</head>
+<body>
+<div id="app-wrapper">
+
+    <!-- Left Sidebar: Menu with the Processing Architectures -->
+    <aside id="left-sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-status-pill">SYS_ONLINE // 4.00 HZ</div>
+            <div class="sidebar-title">FLYNNSIM</div>
+            <div class="sidebar-subtitle">ADVANCED ARCHITECTURE LAB</div>
+        </div>
+
+        <div class="sidebar-section-title">// PROCESSING ENGINES</div>
+        <nav class="sidebar-nav-list" id="nav-tabs-bar">
+            <a href="sisd.html" class="sidebar-link">
+                <div class="sidebar-link-row">
+                    <span class="link-code">[01]</span>
+                    <span class="link-name">SISD CORE</span>
+                </div>
+                <span class="link-sub">1 INST / 1 DATA STREAM</span>
+            </a>
+            <a href="simd.html" class="sidebar-link">
+                <div class="sidebar-link-row">
+                    <span class="link-code">[02]</span>
+                    <span class="link-name">SIMD VECTOR</span>
+                </div>
+                <span class="link-sub">1 INST / N DATA STREAMS</span>
+            </a>
+            <a href="misd.html" class="sidebar-link">
+                <div class="sidebar-link-row">
+                    <span class="link-code">[03]</span>
+                    <span class="link-name">MISD PIPELINE</span>
+                </div>
+                <span class="link-sub">N INST / 1 DATA STREAM</span>
+            </a>
+            <a href="mimd.html" class="sidebar-link">
+                <div class="sidebar-link-row">
+                    <span class="link-code">[04]</span>
+                    <span class="link-name">MIMD MULTICORE</span>
+                </div>
+                <span class="link-sub">N INST / N DATA STREAMS</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-section-title">// ARENA &amp; EXPERIMENTS</div>
+        <nav class="sidebar-nav-list">
+            <a href="index.html" class="sidebar-link">
+                <div class="sidebar-link-row">
+                    <span class="link-code">[00]</span>
+                    <span class="link-name">RACE ARENA</span>
+                </div>
+                <span class="link-sub">SYNCHRONOUS EXECUTION</span>
+            </a>
+            <a href="analytics.html" class="sidebar-link">
+                <div class="sidebar-link-row">
+                    <span class="link-code">[05]</span>
+                    <span class="link-name">ANALYTICS &amp; AMDAHL</span>
+                </div>
+                <span class="link-sub">SCALING LAWS &amp; BENCHMARKS</span>
+            </a>
+            <a href="theory.html" class="sidebar-link active">
+                <div class="sidebar-link-row">
+                    <span class="link-code">[06]</span>
+                    <span class="link-name">TAXONOMY THEORY</span>
+                </div>
+                <span class="link-sub">1966 FLYNN COMPENDIUM</span>
+            </a>
+            <a href="editor.html" class="sidebar-link">
+                <div class="sidebar-link-row">
+                    <span class="link-code">[07]</span>
+                    <span class="link-name">ASSEMBLY IDE</span>
+                </div>
+                <span class="link-sub">TINYISA MICROCODE STUDIO</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="telemetry-row"><span>DOCUMENT:</span> <strong>ARCH_THEORY_v2</strong></div>
+            <div class="telemetry-row"><span>TAXONOMY:</span> <strong>MICHAEL J. FLYNN</strong></div>
+            <div class="telemetry-row"><span>YEAR:</span> <strong>1966 IEEE TC</strong></div>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main id="main-content">
+        <div class="studio-container">
+
+            <!-- Studio Hero Banner -->
+            <div class="studio-hero">
+                <div class="studio-hero-text">
+                    <h2>[06] FLYNN'S TAXONOMY THEORY REFERENCE</h2>
+                    <p>
+                        Proposed in 1966 by Michael J. Flynn, this seminal classification categorizes all digital computer architectures 
+                        based on the multiplicity of concurrent <strong>Instruction Streams</strong> and <strong>Data Streams</strong>. 
+                        Use this guide for theoretical study, system design principles, and technical architecture defense preparation.
+                    </p>
+                </div>
+                <span class="studio-hero-badge">SYSTEM ARCHITECTURE REFERENCE</span>
+            </div>
+
+            <!-- Flynn's 2x2 Matrix Section -->
+            <div class="inspector-panel" style="margin-bottom:24px;">
+                <div class="inspector-header">FLYNN'S 2 &times; 2 ARCHITECTURAL MATRIX</div>
+                <div style="padding:22px;background:var(--c-bg);">
+                    <div class="hero-quadrants-grid">
+                        <div class="hero-quadrant-card">
+                            <span class="quadrant-tag">[QUADRANT 01]</span>
+                            <div class="quadrant-axis">1 INST / 1 DATA STREAM</div>
+                            <h3>SISD // VON NEUMANN</h3>
+                            <p>Single Control Unit fetches one instruction to process one data element. Sequential uniprocessor execution without hardware concurrency.</p>
+                            <div style="font-size:11px;color:var(--c-text-muted);margin-top:6px;"><strong>Examples:</strong> Intel 8086, PDP-11, ARM Cortex-M0</div>
+                        </div>
+
+                        <div class="hero-quadrant-card">
+                            <span class="quadrant-tag">[QUADRANT 02]</span>
+                            <div class="quadrant-axis">1 INST / N DATA STREAMS</div>
+                            <h3>SIMD // VECTOR ARRAY</h3>
+                            <p>Single Master CU broadcasts one instruction to N lockstep PEs. Massive uniform vector throughput with mask predicated branching.</p>
+                            <div style="font-size:11px;color:var(--c-text-muted);margin-top:6px;"><strong>Examples:</strong> NVIDIA CUDA Warps, AVX-512, Cray-1</div>
+                        </div>
+
+                        <div class="hero-quadrant-card">
+                            <span class="quadrant-tag">[QUADRANT 03]</span>
+                            <div class="quadrant-axis">N INST / 1 DATA STREAM</div>
+                            <h3>MISD // STREAM PIPE</h3>
+                            <p>N independent CUs operate concurrently on one data stream. Pipelined systolic processing and hardware fault voting.</p>
+                            <div style="font-size:11px;color:var(--c-text-muted);margin-top:6px;"><strong>Examples:</strong> Space Shuttle TMR Voter, TPU Systolic Arrays</div>
+                        </div>
+
+                        <div class="hero-quadrant-card">
+                            <span class="quadrant-tag">[QUADRANT 04]</span>
+                            <div class="quadrant-axis">N INST / N DATA STREAMS</div>
+                            <h3>MIMD // MULTICORE</h3>
+                            <p>N independent CUs execute separate instruction streams on independent data sets. Shared bus arbitration vs cluster networks.</p>
+                            <div style="font-size:11px;color:var(--c-text-muted);margin-top:6px;"><strong>Examples:</strong> Modern Multicores (Intel, AMD, Apple), Supercomputers</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Architectural Deep Dives Grid -->
+            <div class="studio-inspectors-grid">
+                <!-- SISD Deep Dive -->
+                <div class="inspector-panel">
+                    <div class="inspector-header">SISD UNIPROCESSOR ANALYSIS</div>
+                    <div style="padding:20px;background:var(--c-bg);font-size:12.5px;line-height:1.7;color:var(--c-text-body);">
+                        <p>In a pure SISD system, instructions execute sequentially. While superscalar architectures execute multiple instructions per cycle using out-of-order execution, they remain functionally SISD because they uphold the illusion of a single sequential instruction stream.</p>
+                        <br>
+                        <strong style="color:var(--c-phosphor);">[ADVANTAGES]:</strong> Simple programming model, deterministic debugging, no concurrency races.<br>
+                        <strong style="color:var(--c-amber);">[BOTTLENECK]:</strong> Strictly constrained by Dennard scaling limits and the Von Neumann memory wall.
+                    </div>
+                </div>
+
+                <!-- SIMD Deep Dive -->
+                <div class="inspector-panel">
+                    <div class="inspector-header">SIMD VECTOR &amp; GPU WARP ANALYSIS</div>
+                    <div style="padding:20px;background:var(--c-bg);font-size:12.5px;line-height:1.7;color:var(--c-text-body);">
+                        <p>SIMD amortizes instruction fetch/decode energy across dozens of ALUs. However, when branches occur (<code>if/else</code>), SIMD hardware must serialize both execution paths using <strong>predication masks</strong>, idling cores that do not participate.</p>
+                        <br>
+                        <strong style="color:var(--c-phosphor);">[ADVANTAGES]:</strong> Exceptional compute density and energy efficiency for matrices/graphics.<br>
+                        <strong style="color:var(--c-amber);">[BOTTLENECK]:</strong> Branch divergence penalizes performance heavily on irregular logic.
+                    </div>
+                </div>
+
+                <!-- MISD Deep Dive -->
+                <div class="inspector-panel">
+                    <div class="inspector-header">MISD PIPELINES &amp; REDUNDANCY</div>
+                    <div style="padding:20px;background:var(--c-bg);font-size:12.5px;line-height:1.7;color:var(--c-text-body);">
+                        <p>Why is MISD rarely seen in consumer devices? General-purpose software either parallelizes data items (SIMD) or splits independent tasks (MIMD). MISD is engineered for two specific high-reliability or high-throughput domains:</p>
+                        <br>
+                        <strong>1. Triple Modular Redundancy (TMR):</strong> Aerospace flight computers broadcast sensor inputs to 3 diverse PEs with a majority voter to mask cosmic ray bit-flips.<br>
+                        <strong>2. Systolic Tensor Arrays:</strong> Matrix multiply engines where activations stream through ALU cascades without round-trip memory writes.
+                    </div>
+                </div>
+
+                <!-- MIMD Deep Dive -->
+                <div class="inspector-panel">
+                    <div class="inspector-header">MIMD MEMORY TOPOLOGIES</div>
+                    <div style="padding:20px;background:var(--c-bg);font-size:12.5px;line-height:1.7;color:var(--c-text-body);">
+                        <p>MIMD systems are split into two foundational memory paradigms:</p>
+                        <br>
+                        <strong style="color:var(--c-phosphor);">[SHARED MEMORY (SMP / UMA)]:</strong> All cores share a unified address space. Simple multi-threaded programming, but memory bus contention and cache coherence traffic limit scalability to tens of sockets.<br><br>
+                        <strong style="color:var(--c-phosphor);">[DISTRIBUTED MEMORY (CLUSTERS / NUMA)]:</strong> Each node maintains private physical memory; communication happens via explicit message passing (MPI). Scalable to millions of cores.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Technical Examination Defense Q&A -->
+            <div class="inspector-panel" style="margin-top:26px;">
+                <div class="inspector-header">TECHNICAL EXAMINATION &amp; DEFENSE Q&amp;A GUIDE</div>
+                <div style="padding:22px;background:var(--c-bg);display:flex;flex-direction:column;gap:20px;font-size:13px;line-height:1.7;">
+                    <div>
+                        <strong style="color:var(--c-phosphor);">Q1: Why does SIMD execute faster than shared-memory MIMD on Vector Addition in FlynnSim?</strong>
+                        <p style="color:var(--c-text-body);margin-top:4px;">
+                            <em>Answer:</em> SIMD uses a single broadcast Control Unit and parallel vector memory banks, eliminating control instruction overhead and shared-bus arbitration. In shared-memory MIMD, multiple independent threads contend for the central memory bus during store operations, causing bus contention stalls.
+                        </p>
+                    </div>
+
+                    <div>
+                        <strong style="color:var(--c-phosphor);">Q2: What is SIMD branch divergence, and how does FlynnSim demonstrate it?</strong>
+                        <p style="color:var(--c-text-body);margin-top:4px;">
+                            <em>Answer:</em> Because SIMD shares a single instruction sequencer broadcasting to all PEs, it cannot follow two branches simultaneously. PEs failing the condition are masked off (<code>MASK=0</code>) and idle while the <code>THEN</code> block runs, and vice-versa for the <code>ELSE</code> block. FlynnSim records these idle cycles in the Divergence Penalty Meter.
+                        </p>
+                    </div>
+
+                    <div>
+                        <strong style="color:var(--c-phosphor);">Q3: How does FlynnSim handle vector lengths that are not exact multiples of the PE count?</strong>
+                        <p style="color:var(--c-text-body);margin-top:4px;">
+                            <em>Answer:</em> FlynnSim employs <strong>tail predication masking</strong> (<code>MASK_EVAL PE_LT #rem</code>). On the final iteration, only PEs whose IDs are less than the remainder elements remain active; the others are masked off, preventing invalid memory writes.
+                        </p>
+                    </div>
+
+                    <div>
+                        <strong style="color:var(--c-phosphor);">Q4: What is the core difference between Amdahl's Law and Gustafson's Law?</strong>
+                        <p style="color:var(--c-text-body);margin-top:4px;">
+                            <em>Answer:</em> <strong>Amdahl's Law</strong> models strong scaling (fixed problem size), where speedup is strictly bounded by the serial fraction <code>1 / (1 − p)</code>. <strong>Gustafson's Law</strong> models weak scaling (problem size scales proportionally with core count), where speedup grows linearly as <code>S(N) = s + N(1 − s)</code>.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Footer -->
+            <footer id="main-footer">
+                <div><strong>FLYNNSIM // TAXONOMY THEORY REFERENCE</strong> &mdash; Educational Compendium</div>
+                <div>Michael J. Flynn (1966) &bull; Computer Systems Architecture Reference</div>
+            </footer>
+        </div>
+    </main>
+</div>
+</body>
+</html>

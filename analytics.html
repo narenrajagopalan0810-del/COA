@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlynnSim — Performance Analytics &amp; Amdahl's Law Lab</title>
+    <meta name="description" content="Compare SISD, SIMD, MISD, and MIMD performance. Visualize Amdahl's Law strong scaling limits and export benchmark results as CSV.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="css/style.css?v=20261016_v3">
+    <style>
+        *, *::before, *::after { box-sizing: border-box !important; margin: 0; padding: 0; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+        html, body { background: #000000 !important; color: #86efac !important; font-family: 'JetBrains Mono', 'Courier New', Courier, monospace !important; font-size: 13px !important; line-height: 1.6 !important; min-height: 100vh !important; overflow-x: hidden !important; }
+        a, a:visited { color: #00ff41 !important; text-decoration: none !important; }
+        a:hover { color: #39ff14 !important; }
+        .block-icon, .icon, i[class^="icon-"], [class*="emoji"] { display: none !important; }
+        #app-wrapper { display: block !important; min-height: 100vh !important; width: 100% !important; background: #000000 !important; }
+        #left-sidebar { position: fixed !important; top: 0 !important; left: 0 !important; bottom: 0 !important; width: 280px !important; height: 100vh !important; background: #030804 !important; border-right: 2px solid #00ff41 !important; display: flex !important; flex-direction: column !important; z-index: 9999 !important; overflow-y: auto !important; box-shadow: 4px 0 24px rgba(0,0,0,0.9) !important; }
+        .sidebar-header { padding: 24px 20px 20px !important; border-bottom: 1px solid #16381e !important; background: #050c06 !important; }
+        .sidebar-status-pill { display: inline-flex !important; align-items: center !important; gap: 8px !important; font-size: 11px !important; font-weight: 700 !important; color: #39ff14 !important; text-transform: uppercase !important; margin-bottom: 10px !important; }
+        .sidebar-status-pill::before { content: "" !important; display: inline-block !important; width: 6px !important; height: 6px !important; background: #39ff14 !important; border-radius: 50% !important; box-shadow: 0 0 10px #39ff14 !important; }
+        .sidebar-title { font-size: 22px !important; font-weight: 800 !important; color: #00ff41 !important; letter-spacing: 0.12em !important; line-height: 1.15 !important; text-shadow: 0 0 12px rgba(0, 255, 65, 0.45) !important; }
+        .sidebar-subtitle { font-size: 10px !important; font-weight: 600 !important; color: #366e43 !important; letter-spacing: 0.1em !important; text-transform: uppercase !important; margin-top: 5px !important; }
+        .sidebar-section-title { padding: 20px 20px 8px !important; font-size: 10px !important; font-weight: 800 !important; color: #366e43 !important; letter-spacing: 0.16em !important; text-transform: uppercase !important; }
+        .sidebar-nav-list { display: flex !important; flex-direction: column !important; padding: 0 10px !important; gap: 4px !important; }
+        .sidebar-link, .nav-tab { display: flex !important; flex-direction: column !important; padding: 10px 14px !important; color: #86efac !important; border-left: 3px solid transparent !important; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important; text-decoration: none !important; font-size: 12px !important; }
+        .sidebar-link-row { display: flex !important; justify-content: space-between !important; align-items: center !important; width: 100% !important; font-weight: 700 !important; }
+        .sidebar-link .link-sub { font-size: 9.5px !important; color: #366e43 !important; margin-top: 3px !important; letter-spacing: 0.05em !important; }
+        .sidebar-link:hover, .nav-tab:hover { color: #000000 !important; background: #00ff41 !important; border-left-color: #ffffff !important; transform: translateX(6px) !important; box-shadow: 0 0 16px rgba(0, 255, 65, 0.45) !important; }
+        .sidebar-link:hover *, .nav-tab:hover * { color: #000000 !important; }
+        .sidebar-link.active, .nav-tab.active { color: #000000 !important; background: #00ff41 !important; border-left-color: #ffffff !important; font-weight: 800 !important; box-shadow: 0 0 18px rgba(0, 255, 65, 0.45) !important; }
+        .sidebar-link.active *, .nav-tab.active * { color: #000000 !important; font-weight: 700 !important; }
+        .sidebar-footer { margin-top: auto !important; padding: 18px 20px !important; border-top: 1px solid #16381e !important; background: #050c06 !important; font-size: 10.5px !important; color: #366e43 !important; display: flex !important; flex-direction: column !important; gap: 5px !important; }
+        .sidebar-footer .telemetry-row { display: flex !important; justify-content: space-between !important; }
+        .sidebar-footer .telemetry-row strong { color: #00ff41 !important; }
+        #main-content, .main-viewport { margin-left: 280px !important; min-height: 100vh !important; background: #000000 !important; padding: 36px 44px 80px !important; }
+        .studio-container { max-width: 1400px !important; margin: 0 auto !important; }
+        .control-btn, .btn, button { display: inline-flex !important; align-items: center !important; justify-content: center !important; font-family: 'JetBrains Mono', Courier, monospace !important; font-size: 11.5px !important; font-weight: 800 !important; letter-spacing: 0.09em !important; text-transform: uppercase !important; padding: 9px 18px !important; background: #020502 !important; color: #00ff41 !important; border: 1px solid #00ff41 !important; cursor: pointer !important; transition: all 0.16s ease !important; text-decoration: none !important; border-radius: 0 !important; outline: none !important; }
+        .control-btn:hover, .btn:hover, button:hover { background: #00ff41 !important; color: #000000 !important; box-shadow: 0 0 18px rgba(0, 255, 65, 0.5) !important; transform: translateY(-1px) !important; }
+        .btn-primary { border-color: #00ff41 !important; color: #00ff41 !important; }
+        .btn-success { border-color: #39ff14 !important; color: #39ff14 !important; }
+        .btn-accent { border-color: #00ff41 !important; color: #00ff41 !important; }
+        .btn-danger { border-color: #ff3838 !important; color: #ff3838 !important; }
+        .btn-danger:hover { background: #ff3838 !important; color: #000000 !important; }
+        .studio-hero { border: 1px solid #00ff41 !important; background: #050c06 !important; padding: 26px 30px !important; margin-bottom: 24px !important; display: flex !important; justify-content: space-between !important; align-items: flex-start !important; gap: 24px !important; }
+        .studio-hero-text h2 { font-size: 22px !important; color: #00ff41 !important; font-weight: 800 !important; margin-bottom: 8px !important; }
+        .studio-hero-text p { font-size: 13.5px !important; color: #86efac !important; line-height: 1.65 !important; }
+        .studio-hero-badge { border: 1px solid #00ff41 !important; color: #00ff41 !important; background: rgba(0, 255, 65, 0.08) !important; padding: 5px 12px !important; font-weight: 800 !important; height: fit-content !important; text-transform: uppercase !important; font-size: 10.5px !important; white-space: nowrap !important; }
+        .info-callout { border: 1px solid #16381e !important; background: #020502 !important; padding: 20px 26px !important; margin-bottom: 24px !important; color: #86efac !important; font-size: 13px !important; line-height: 1.7 !important; }
+        .callout-title { font-size: 12px !important; font-weight: 800 !important; color: #39ff14 !important; margin-bottom: 8px !important; text-transform: uppercase !important; }
+        #control-bar { display: flex !important; flex-wrap: wrap !important; align-items: center !important; gap: 14px !important; padding: 16px 20px !important; background: #050c06 !important; border: 1px solid #16381e !important; margin-bottom: 22px !important; }
+        .control-group { display: flex !important; align-items: center !important; gap: 8px !important; }
+        .control-label { font-size: 11px !important; font-weight: 700 !important; color: #366e43 !important; text-transform: uppercase !important; }
+        .control-select, .control-input-number, select, input { background: #020502 !important; color: #39ff14 !important; border: 1px solid #16381e !important; padding: 8px 12px !important; font-family: inherit !important; font-size: 12px !important; }
+        .inspector-panel { border: 1px solid #16381e !important; background: #050c06 !important; margin-bottom: 24px !important; }
+        .inspector-header { padding: 12px 18px !important; background: #020502 !important; border-bottom: 1px solid #16381e !important; font-size: 11px !important; font-weight: 800 !important; color: #00ff41 !important; letter-spacing: 0.1em !important; text-transform: uppercase !important; }
+        .comparison-table { width: 100% !important; border-collapse: collapse !important; font-size: 12px !important; }
+        .comparison-table th { background: #020502 !important; color: #366e43 !important; border: 1px solid #16381e !important; padding: 9px 14px !important; font-weight: 800 !important; text-align: left !important; }
+        .comparison-table td { border: 1px solid #16381e !important; padding: 9px 14px !important; color: #86efac !important; text-align: left !important; }
+        .comparison-table tr:hover { background: #09160a !important; }
+        .analytics-grid { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 22px !important; margin-bottom: 26px !important; }
+        .chart-card { border: 1px solid #16381e !important; background: #050c06 !important; padding: 20px !important; }
+        .chart-title { font-size: 12px !important; font-weight: 800 !important; color: #00ff41 !important; margin-bottom: 16px !important; letter-spacing: 0.08em !important; text-transform: uppercase !important; }
+        #main-footer { margin-top: 60px !important; padding: 20px 0 !important; border-top: 1px solid #16381e !important; display: flex !important; justify-content: space-between !important; font-size: 11px !important; color: #366e43 !important; }
+    </style>
+</head>
+<body>
+<div id="app-wrapper">
+
+    <!-- Left Sidebar: Menu with the Processing Architectures -->
+    <aside id="left-sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-status-pill">SYS_ONLINE // 4.00 HZ</div>
+            <div class="sidebar-title">FLYNNSIM</div>
+            <div class="sidebar-subtitle">ADVANCED ARCHITECTURE LAB</div>
+        </div>
+
+        <div class="sidebar-section-title">// PROCESSING ENGINES</div>
+        <nav class="sidebar-nav-list" id="nav-tabs-bar">
+            <a href="sisd.html" class="sidebar-link">
+                <div class="sidebar-link-row">
+                    <span class="link-code">[01]</span>
+                    <span class="link-name">SISD CORE</span>
+                </div>
+                <span class="link-sub">1 INST / 1 DATA STREAM</span>
+            </a>
+            <a href="simd.html" class="sidebar-link">
+                <div class="sidebar-link-row">
+                    <span class="link-code">[02]</span>
+                    <span class="link-name">SIMD VECTOR</span>
+                </div>
+                <span class="link-sub">1 INST / N DATA STREAMS</span>
+            </a>
+            <a href="misd.html" class="sidebar-link">
+                <div class="sidebar-link-row">
+                    <span class="link-code">[03]</span>
+                    <span class="link-name">MISD PIPELINE</span>
+                </div>
+                <span class="link-sub">N INST / 1 DATA STREAM</span>
+            </a>
+            <a href="mimd.html" class="sidebar-link">
+                <div class="sidebar-link-row">
+                    <span class="link-code">[04]</span>
+                    <span class="link-name">MIMD MULTICORE</span>
+                </div>
+                <span class="link-sub">N INST / N DATA STREAMS</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-section-title">// ARENA &amp; EXPERIMENTS</div>
+        <nav class="sidebar-nav-list">
+            <a href="index.html" class="sidebar-link">
+                <div class="sidebar-link-row">
+                    <span class="link-code">[00]</span>
+                    <span class="link-name">RACE ARENA</span>
+                </div>
+                <span class="link-sub">SYNCHRONOUS EXECUTION</span>
+            </a>
+            <a href="analytics.html" class="sidebar-link active">
+                <div class="sidebar-link-row">
+                    <span class="link-code">[05]</span>
+                    <span class="link-name">ANALYTICS &amp; AMDAHL</span>
+                </div>
+                <span class="link-sub">SCALING LAWS &amp; BENCHMARKS</span>
+            </a>
+            <a href="theory.html" class="sidebar-link">
+                <div class="sidebar-link-row">
+                    <span class="link-code">[06]</span>
+                    <span class="link-name">TAXONOMY THEORY</span>
+                </div>
+                <span class="link-sub">1966 FLYNN COMPENDIUM</span>
+            </a>
+            <a href="editor.html" class="sidebar-link">
+                <div class="sidebar-link-row">
+                    <span class="link-code">[07]</span>
+                    <span class="link-name">ASSEMBLY IDE</span>
+                </div>
+                <span class="link-sub">TINYISA MICROCODE STUDIO</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="telemetry-row"><span>BENCHMARK:</span> <strong>AUTOMATED SUITE</strong></div>
+            <div class="telemetry-row"><span>SCALING:</span> <strong>AMDAHL MODEL</strong></div>
+            <div class="telemetry-row"><span>REPORT:</span> <strong>CSV TELEMETRY</strong></div>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main id="main-content">
+        <div class="studio-container">
+
+            <!-- Studio Hero Banner -->
+            <div class="studio-hero">
+                <div class="studio-hero-text">
+                    <h2>[05] PERFORMANCE ANALYTICS &amp; AMDAHL'S LAW LAB</h2>
+                    <p>
+                        Run cross-architectural benchmarks to measure execution cycles, empirical speedup relative to SISD uniprocessor baseline, 
+                        core efficiency, and hardware utilization. Interactively explore Amdahl's Law to model why adding more cores eventually reaches diminishing returns.
+                    </p>
+                </div>
+                <span class="studio-hero-badge">SCALING METRICS &amp; TELEMETRY</span>
+            </div>
+
+            <!-- Architectural Explanation Callout -->
+            <div class="info-callout">
+                <div class="callout-title">// AMDAHL'S LAW: THE SPEEDUP LIMITATION OF SERIAL CODE FRACTIONS</div>
+                <p>
+                    Gene Amdahl (1967) established that the speedup of a program using <code>N</code> parallel cores is bounded by its non-parallelizable serial portion:
+                    <br><br>
+                    <code>Speedup S(N) = 1 / ((1 − p) + (p / N))</code>
+                    <br><br>
+                    Where <strong>p</strong> is the parallel fraction (0 to 1). As <code>N &rarr; &infin;</code>, maximum speedup asymptotically approaches <code>1 / (1 − p)</code>. 
+                    If only 15% of your code is serial, the theoretical maximum speedup is <strong>6.67×</strong> — regardless of whether you have 16 cores, 64 cores, or 10,000 cores!
+                </p>
+            </div>
+
+            <!-- Simulation Control Bar -->
+            <section id="control-bar">
+                <div class="control-group">
+                    <label for="select-workload" class="control-label">Workload:</label>
+                    <select id="select-workload" class="control-select">
+                        <option value="vector_addition">Vector Addition (C = A + B, L = 8)</option>
+                        <option value="matrix_mult">Matrix Multiplication (2×2)</option>
+                        <option value="conditional_filter">Conditional Filter (Divergence Test)</option>
+                        <option value="stream_pipeline">Multi-Stage Signal Pipeline</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label for="select-pe-count" class="control-label">SIMD/MIMD Cores (N):</label>
+                    <select id="select-pe-count" class="control-select">
+                        <option value="2">2 PEs</option>
+                        <option value="4" selected>4 PEs</option>
+                        <option value="8">8 PEs</option>
+                        <option value="16">16 PEs</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <button id="btn-run-benchmark" class="control-btn btn-primary"><span>RUN FULL BENCHMARK</span></button>
+                </div>
+
+                <div class="control-group" style="margin-left:auto;">
+                    <button id="btn-export-csv" class="control-btn btn-export"><span>EXPORT CSV</span></button>
+                </div>
+            </section>
+
+            <!-- Comparison Table Panel -->
+            <div class="inspector-panel" style="margin-bottom:24px;">
+                <div class="inspector-header">CROSS-ARCHITECTURE PERFORMANCE SUMMARY</div>
+                <div style="overflow-x:auto;padding:12px;background:var(--c-bg);">
+                    <table class="comparison-table">
+                        <thead>
+                            <tr>
+                                <th>Architecture</th>
+                                <th>PE Cores (N)</th>
+                                <th>Total Cycles (T)</th>
+                                <th>Instructions (I)</th>
+                                <th>Speedup vs SISD</th>
+                                <th>Utilization (%)</th>
+                                <th>Efficiency (S/N)</th>
+                                <th>Throughput (IPC)</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="comparison-table-body">
+                            <!-- Populated dynamically by page_analytics.js -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Charts Row -->
+            <div class="analytics-grid">
+                <!-- Bar Chart: Clock Cycles & Speedup -->
+                <div class="chart-card">
+                    <div class="chart-title">ARCHITECTURAL EXECUTION CYCLES &amp; SPEEDUP</div>
+                    <div style="height:280px;position:relative;">
+                        <canvas id="chart-cycles-comparison"></canvas>
+                    </div>
+                    <div style="font-size:11px;color:var(--c-text-muted);margin-top:12px;border-top:1px solid var(--c-border-dim);padding-top:8px;">
+                        <strong style="color:var(--c-phosphor);">GREEN BARS:</strong> Clock Cycles (lower is better) &nbsp;|&nbsp;
+                        <strong style="color:var(--c-amber);">AMBER BARS:</strong> Speedup multiplier S = T<sub>SISD</sub> / T<sub>arch</sub> (higher is better)
+                    </div>
+                </div>
+
+                <!-- Amdahl Line Chart -->
+                <div class="chart-card">
+                    <div class="chart-title">AMDAHL'S LAW SCALING BOUNDS</div>
+                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;background:var(--c-bg);padding:8px 14px;border:1px solid var(--c-border-dim);">
+                        <label for="slider-amdahl-p" class="control-label">Parallel Fraction (p):</label>
+                        <input type="range" id="slider-amdahl-p" min="0.10" max="0.99" step="0.01" value="0.85" class="control-slider">
+                        <span id="amdahl-p-value" style="font-size:11px;color:var(--c-amber);font-weight:800;">Parallel: 85% | Serial: 15%</span>
+                    </div>
+                    <div style="height:230px;position:relative;">
+                        <canvas id="chart-amdahl"></canvas>
+                    </div>
+                    <div style="font-size:11px;color:var(--c-text-muted);margin-top:12px;border-top:1px solid var(--c-border-dim);padding-top:8px;">
+                        Formula: <code>S(N) = 1 / ((1 − p) + (p / N))</code> &mdash; As N &rarr; &infin;, max speedup = <strong>1 / (1 − p)</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Footer -->
+            <footer id="main-footer">
+                <div><strong>FLYNNSIM // ANALYTICS &amp; AMDAHL LAB</strong> &mdash; Quantitative Architecture Evaluation</div>
+                <div>Amdahl's Strong Scaling &bull; Efficiency &bull; IPC &bull; Bit-Exact Output Verification</div>
+            </footer>
+        </div>
+    </main>
+</div>
+
+<!-- Scripts -->
+<script src="js/isa.js"></script>
+<script src="js/pe.js"></script>
+<script src="js/memory.js"></script>
+<script src="js/architectures/base_arch.js"></script>
+<script src="js/architectures/sisd.js"></script>
+<script src="js/architectures/simd.js"></script>
+<script src="js/architectures/misd.js"></script>
+<script src="js/architectures/mimd.js"></script>
+<script src="js/workloads.js"></script>
+<script src="js/simulation.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/page_analytics.js"></script>
+</body>
+</html>
